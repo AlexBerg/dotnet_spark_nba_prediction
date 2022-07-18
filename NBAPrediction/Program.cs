@@ -1,4 +1,5 @@
 ﻿using Microsoft.Spark.Sql;
+using NBAPrediction.Services;
 
 namespace NBAPrediction
 {
@@ -6,14 +7,18 @@ namespace NBAPrediction
     {
         static void Main(string[] args)
         {
-            var spark = SparkSession.Builder().GetOrCreate();
+            var helper = new HelperService();
+            var spark = helper.GetSparkSession();
             var path = "/workspace/NBAPrediction/datasets/Advanced.csv";
-            var df = spark.Read()
-                .Format("csv")
-                .Option("sep", ",")
-                .Option("header", true)
-                .Option("inferSchema", true)
-                .Load(path);
+            var df = helper.LoadFromCsv(spark, path);
+            df.Show(numRows: 20);
+
+            df.Write().Format("delta").Mode("overwrite")
+                .Option("overwriteSchema", true)
+                .Save("/workspace/NBAPrediction/datasets/delta/advanced");
+
+            df = spark.Read().Format("delta").Load("/workspace/NBAPrediction/datasets/delta/advanced");
+
             df.Show(numRows: 20);
         }
     }

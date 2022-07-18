@@ -6,6 +6,6 @@ namespace NBAPrediction.Services
     {
         public string GetCorrectFilePath(string path);
         public SparkSession GetSparkSession();
-        public DataFrame LoadFromCsv(string path);
+        public DataFrame LoadFromCsv(SparkSession spark, string path);
     }
 }
