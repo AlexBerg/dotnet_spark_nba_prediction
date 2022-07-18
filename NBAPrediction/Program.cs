@@ -8,9 +8,6 @@ namespace NBAPrediction
         {
             var spark = SparkSession.Builder().GetOrCreate();
             var path = "datasets/Advanced.csv";
-            #if DEBUG
-                path = "/workspace/NBAPrediction/" + path;
-            #endif
             var df = spark.Read()
                 .Format("csv")
                 .Option("sep", ",")

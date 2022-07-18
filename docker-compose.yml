@@ -5,7 +5,8 @@ services:
   dotnet_spark:
     container_name: dotnet-spark
     build: 
-      context: ./docker-setup/dotnet-spark
+      context: ./docker
+      dockerfile: Dockerfile.dotnet-spark
       args:
         - DOTNET_CORE_VERSION=3.1
         - DOTNET_SPARK_VERSION=2.1.1
