@@ -7,7 +7,7 @@ namespace NBAPrediction
         static void Main(string[] args)
         {
             var spark = SparkSession.Builder().GetOrCreate();
-            var path = "datasets/Advanced.csv";
+            var path = "/workspace/NBAPrediction/datasets/Advanced.csv";
             var df = spark.Read()
                 .Format("csv")
                 .Option("sep", ",")
