@@ -37,7 +37,12 @@ RUN mkdir /tempdata \
     && rm spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz \
     && chmod 755 /usr/local/bin/start-spark-worker.sh \
     && chmod 755 /usr/local/bin/start-spark-driver.sh \
-    && chmod 755 /usr/local/bin/start-spark-debug.sh
+    && chmod 755 /usr/local/bin/start-spark-debug.sh \
+    && wget https://github.com/microsoft/mssql-jdbc/releases/download/v7.2.2/mssql-jdbc-7.2.2.jre8.jar \
+    && cp mssql-jdbc-7.2.2.jre8.jar spark/jars \
+    && mkdir /shared_data
+
+COPY templates/hive-site.xml /spark/conf/hive-site.xml
 
 EXPOSE 8080 8081 7077 6066 5567 4040
 

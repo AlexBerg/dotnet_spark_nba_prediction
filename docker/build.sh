@@ -18,6 +18,7 @@ proxy=""
 main() {
     echo "Building .NET for Apache Spark ${dotnet_spark_version} runtime image with Apache Spark ${apache_spark_version}"
 
+    build_java_base
     build_dotnet_sdk
     build_dotnet_spark_base_runtime
     build_dotnet_spark_runtime
@@ -54,7 +55,19 @@ build_image() {
 }
 
 #######################################
-# Use the Dockerfile in the sub-folder dotnet-sdk to build the image of the first stage
+# Use the Dockerfile Dockerfile.java-base to build the image of the first stage
+# Result:
+#   A java-sdk image tagged with the sdk version.
+#######################################
+build_dotnet_sdk() {
+    local image_name="java-sdk:8"
+    local docker_file_name="Dockerfile.java-base"
+
+    build_image "${image_name}" "${docker_file_name}"
+}
+
+#######################################
+# Use the Dockerfile.dotnet-sdk to build the image of the second stage
 # Result:
 #   A dotnet-sdk docker image tagged with the .NET core version
 #######################################
@@ -66,7 +79,7 @@ build_dotnet_sdk() {
 }
 
 #######################################
-# Use the Dockerfile in the sub-folder dotnet-spark-base to build the image of the second stage
+# Use the Dockerfile.dotnet-spark-base to build the image of the third stage
 # The image contains the specified .NET for Apache Spark version plus the HelloSpark example
 #   for the correct TargetFramework and Microsoft.Spark package version
 # Result:
@@ -80,7 +93,7 @@ build_dotnet_spark_base_runtime() {
 }
 
 #######################################
-# Use the Dockerfile in the sub-folder dotnet-spark to build the image of the last stage
+# Use the Dockerfile.dotnet-spark to build the image of the last stage
 # The image contains the specified Apache Spark version
 # Result:
 #   A dotnet-spark docker image tagged with the .NET for Apache Spark version and the Apache Spark version.
