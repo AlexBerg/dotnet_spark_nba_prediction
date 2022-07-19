@@ -1,4 +1,4 @@
-FROM java-base:latest
+FROM java-base:8
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG DOTNET_CORE_VERSION=3.1

@@ -59,8 +59,8 @@ build_image() {
 # Result:
 #   A java-sdk image tagged with the sdk version.
 #######################################
-build_dotnet_sdk() {
-    local image_name="java-sdk:8"
+build_java_base() {
+    local image_name="java-base:8"
     local docker_file_name="Dockerfile.java-base"
 
     build_image "${image_name}" "${docker_file_name}"

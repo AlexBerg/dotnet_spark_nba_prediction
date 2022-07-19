@@ -1,4 +1,4 @@
-FROM java-base:latest
+FROM java-base:8
 
 RUN apt-get install -y openssh-server \
     && mkdir /var/run/sshd
@@ -19,15 +19,17 @@ RUN wget https://archive.apache.org/dist/hadoop/common/hadoop-2.7.4/hadoop-2.7.4
 ENV HADOOP_HOME /opt/hadoop
 ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
 
-RUN wget http://apache.claz.org/hive/hive-2.3.9/apache-hive-2.3.9-bin.tar.gz \
-    && tar xf apache-hive-2.3.9-bin.tar.gz \
-    && mv apache-hive-2.3.9-bin /opt \
-    && ln -s /opt/apache-hive-2.3.9-bin /opt/hive \
+RUN wget https://archive.apache.org/dist/hive/hive-2.3.9/apache-hive-2.3.9-bin.tar.gz \
+    && tar -xzvf apache-hive-2.3.9-bin.tar.gz \
+    && mv apache-hive-2.3.9-bin /opt/hive \
     && rm apache-hive-2.3.9-bin.tar.gz \
     && mkdir -p /shared_data \
     && wget https://github.com/microsoft/mssql-jdbc/releases/download/v7.2.2/mssql-jdbc-7.2.2.jre8.jar \
     && cp mssql-jdbc-7.2.2.jre8.jar opt/hive/lib
 
 COPY templates/hive-site.xml /opt/hive/conf/hive-site.xml
+COPY templates/hive-scripts/* /scripts
+
+RUN chmod +x /scripts/init-hive.sh
 
 EXPOSE 9083 10000

@@ -12,12 +12,17 @@ services:
       - SA_PASSWORD=MostSecretPW!
     ports:
       - 1433:1433
+    volumes:
+      - ./container_data/mssql/log:/var/opt/mssql/log
+      - ./container_data/mssql/data:/var/opt/mssql/data
+      - ./container_data/mssql/secrets:/var/opt/mssql/secrets
   
-  hive:
+  hive-metastore:
     container_name: hive-metastore
     build:
       context: ./docker
       dockerfile: Dockerfile.hive
+    entrypoint: /scripts/init-hive.sh
     image: hive:2.3.9
     ports:
       - 10000:10000
@@ -26,6 +31,8 @@ services:
       - "mssql:mssql"
     volumes:
       - "./container_data/hive/warehouse:/shared_data/hive/warehouse"
+    depends_on:
+      - mssql
 
   dotnet_spark:
     container_name: dotnet-spark
