@@ -1,2 +1,3 @@
 #Start SQL Server and start script to create hive metastore database and hive user.
-/opt/mssql/bin/sqlservr & /usr/src/app/setup-sql.sh
+/opt/mssql-tools/bin/sqlcmd -S localhost -l 60 -U sa -P "MostSecretPW!" -d master -i /usr/src/app/init_metastore.sql &
+/opt/mssql/bin/sqlservr

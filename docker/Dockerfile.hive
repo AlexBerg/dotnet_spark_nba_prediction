@@ -18,6 +18,7 @@ RUN wget https://archive.apache.org/dist/hadoop/common/hadoop-2.7.4/hadoop-2.7.4
     && rm hadoop-2.7.4.tar.gz 
 ENV HADOOP_HOME /opt/hadoop
 ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
+ENV HIVE_HOME /opt/hive
 
 RUN wget https://archive.apache.org/dist/hive/hive-2.3.9/apache-hive-2.3.9-bin.tar.gz \
     && tar -xzvf apache-hive-2.3.9-bin.tar.gz \
@@ -28,7 +29,7 @@ RUN wget https://archive.apache.org/dist/hive/hive-2.3.9/apache-hive-2.3.9-bin.t
     && cp mssql-jdbc-7.2.2.jre8.jar opt/hive/lib
 
 COPY templates/hive-site.xml /opt/hive/conf/hive-site.xml
-COPY templates/hive-scripts/* /scripts
+COPY templates/hive-scripts/init-hive.sh /scripts/init-hive.sh
 
 RUN chmod +x /scripts/init-hive.sh
 

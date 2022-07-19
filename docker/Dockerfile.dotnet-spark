@@ -18,7 +18,7 @@ ENV DEAMON_RUN=true \
     SPARK_WORKER_WEBUI_PORT=8081
 ENV PATH="${SPARK_HOME}/bin:${DOTNET_WORK_DIR}:${PATH}"
 
-COPY templates/scripts/* /usr/local/bin/
+COPY templates/spark-scripts/* /usr/local/bin/
 COPY supervisor.conf /etc/supervisor.conf
 COPY templates/HelloSpark /dotnet/HelloSpark
 
