@@ -29,8 +29,6 @@ services:
       - 9083:9083
     links:
       - "mssql:mssql"
-    volumes:
-      - "./container_data/hive/warehouse:/shared_data/hive/warehouse"
     depends_on:
       - mssql
 
@@ -51,6 +49,7 @@ services:
     volumes:
       - ".:/workspace"
       - "./container_data/table_data:/shared_data/table_data"
+      - "./container_data/hive/warehouse:/shared_data/hive/warehouse"
     links:
       - "mssql:mssql"
       - "hive-metastore:hive-metastore"
