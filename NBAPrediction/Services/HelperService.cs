@@ -10,6 +10,7 @@ namespace NBAPrediction.Services
 
         public SparkSession GetSparkSession() {
             return SparkSession.Builder()
+                .EnableHiveSupport()
                 .AppName("dotnet_spark_nba_predicition")
                 .Config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
                 .Config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
