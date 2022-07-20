@@ -1,12 +1,9 @@
 using Microsoft.Spark.Sql;
+using System.Collections.Generic;
 
 namespace NBAPrediction.Services
 {
     internal class HelperService : IHelperService {
-        
-        public string GetCorrectFilePath(string path) {
-            throw new System.NotImplementedException();
-        }
 
         public SparkSession GetSparkSession() {
             return SparkSession.Builder()
@@ -24,6 +21,25 @@ namespace NBAPrediction.Services
                 .Option("header", true)
                 .Option("inferSchema", true)
                 .Load(path);
+        }
+
+        public bool SaveAsManagedDeltaTable(SparkSession spark, DataFrame dataFrame, string tableName, Dictionary<string, string> options) 
+        {
+            if(!spark.Catalog.TableExists(tableName)) 
+            {
+                dataFrame.Write()
+                    .Format("delta")
+                    .SaveAsTable(tableName);
+            }
+            else 
+            {
+                dataFrame.Write()
+                    .Format("delta")
+                    .Options(options)
+                    .SaveAsTable(tableName);
+            }
+
+            return true;
         }
     }
 }
