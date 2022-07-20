@@ -1,5 +1,8 @@
 ﻿using Microsoft.Spark.Sql;
 using NBAPrediction.Services;
+using Microsoft.Spark.Extensions.Delta.Tables;
+using Microsoft.Spark.Sql.Catalog;
+using System;
 
 namespace NBAPrediction
 {
@@ -13,13 +16,24 @@ namespace NBAPrediction
             var df = helper.LoadFromCsv(spark, path);
             df.Show(numRows: 20);
 
-            df.Write().Format("delta").Mode("overwrite")
-                .Option("overwriteSchema", true)
-                .Save("/workspace/NBAPrediction/datasets/delta/advanced");
+            var db = spark.Catalog.CurrentDatabase();
+            var dbs = spark.Catalog.ListDatabases();
 
-            df = spark.Read().Format("delta").Load("/workspace/NBAPrediction/datasets/delta/advanced");
+            dbs.Show();
 
-            df.Show(numRows: 20);
+            if(!spark.Catalog.TableExists("advanced_stats"))
+                df.Write().Format("delta").Mode("overwrite")
+                    .Option("overwriteSchema", true)
+                    .SaveAsTable("advanced_stats");
+            else 
+            {
+                df = spark.Read().Table("advanced_stats");
+                df.Show(numRows: 20, truncate: 0);
+            }
+
+            var tables = spark.Catalog.ListTables();
+
+            tables.Show();
         }
     }
 }
