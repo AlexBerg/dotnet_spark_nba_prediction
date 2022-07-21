@@ -25,7 +25,7 @@ namespace NBAPrediction.Services
                 .Load(path);
         }
 
-        public void SaveAsManagedDeltaTable(DataFrame dataFrame, string tableName)
+        public void CreateOrOverwriteManagedDeltaTable(DataFrame dataFrame, string tableName)
         {
             dataFrame.Write()
                 .Format("delta")

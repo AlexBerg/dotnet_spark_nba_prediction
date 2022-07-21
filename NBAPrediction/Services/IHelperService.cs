@@ -7,7 +7,7 @@ namespace NBAPrediction.Services
     {
         public SparkSession GetSparkSession();
         public DataFrame LoadFromCsv(SparkSession spark, string path);
-        public void SaveAsManagedDeltaTable(DataFrame dataFrame, string tableName);
+        public void CreateOrOverwriteManagedDeltaTable(DataFrame dataFrame, string tableName);
         public DataFrame LoadFromManagedDeltaTable(SparkSession spark, string tableName);
     }
 }
