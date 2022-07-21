@@ -10,3 +10,6 @@ Inspired by and adopted from the [3rdman dotnet-spark project](https://github.co
 3. Create a .NET Core 3.1 project and add the Microsoft.Spark nuget project version 2.1.1.
 
 With all the containers up and running you can develop and debug like normal in either VSCode or Visual Studio.
+
+## Data set
+The data set used is the [NBA stats from 1947 to present](https://www.kaggle.com/datasets/sumitrodatta/nba-aba-baa-stats?datasetId=1177523) found on [Kaggle](https://www.kaggle.com/).
