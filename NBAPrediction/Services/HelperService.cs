@@ -1,11 +1,12 @@
 using Microsoft.Spark.Sql;
-using System.Collections.Generic;
 
 namespace NBAPrediction.Services
 {
-    internal class HelperService : IHelperService {
+    internal class HelperService : IHelperService
+    {
 
-        public SparkSession GetSparkSession() {
+        public SparkSession GetSparkSession()
+        {
             return SparkSession.Builder()
                 .EnableHiveSupport()
                 .AppName("dotnet_spark_nba_predicition")
@@ -14,7 +15,8 @@ namespace NBAPrediction.Services
                 .GetOrCreate();
         }
 
-        public DataFrame LoadFromCsv(SparkSession spark, string path) {
+        public DataFrame LoadFromCsv(SparkSession spark, string path)
+        {
             return spark.Read()
                 .Format("csv")
                 .Option("sep", ",")
@@ -23,23 +25,20 @@ namespace NBAPrediction.Services
                 .Load(path);
         }
 
-        public bool SaveAsManagedDeltaTable(SparkSession spark, DataFrame dataFrame, string tableName, Dictionary<string, string> options) 
+        public void SaveAsManagedDeltaTable(DataFrame dataFrame, string tableName)
         {
-            if(!spark.Catalog.TableExists(tableName)) 
-            {
-                dataFrame.Write()
-                    .Format("delta")
-                    .SaveAsTable(tableName);
-            }
-            else 
-            {
-                dataFrame.Write()
-                    .Format("delta")
-                    .Options(options)
-                    .SaveAsTable(tableName);
-            }
+            dataFrame.Write()
+                .Format("delta")
+                .Mode(SaveMode.Overwrite)
+                .Option("overwriteSchema", true)
+                .SaveAsTable(tableName);
+        }
 
-            return true;
+        public DataFrame LoadFromManagedDeltaTable(SparkSession spark, string tableName) 
+        {
+            return spark.Read()
+                .Format("delta")
+                .Table(tableName);
         }
     }
 }
