@@ -18,15 +18,9 @@ namespace NBAPrediction.Services
 
         public void CreateNBADeltaTables(SparkSession spark)
         {
-            List<string> csvFileNames = new List<string> {
-                "Advanced",
-                "End Of Season Teams",
-                "Player Per Game",
-                "Player Award Shares",
-                "Player Career Info",
-                "Team Summaries"
-            };
+            var teams = CreateTeamTables(spark);
 
+            CreatePlayerTables(spark, teams);
         }
 
         private DataFrame CreateTeamTables(SparkSession spark)
@@ -53,6 +47,7 @@ namespace NBAPrediction.Services
                     F.Col("age").As("AverageAge"),
                     F.Col("w").As("Wins").Cast("short"),
                     F.Col("l").As("Losses").Cast("short"),
+                    (F.Col("Wins") + F.Col("Losses")).As("GamesPlayed"),
                     F.Col("pw").As("PredictedWins").Cast("short"),
                     F.Col("pl").As("PredictedLosses").Cast("short"),
                     F.Col("mov").As("AverageMarginOfVictory"),
@@ -63,7 +58,7 @@ namespace NBAPrediction.Services
                     F.Col("n_rtg").As("NetRating"),
                     F.Col("pace").As("Pace"),
                     F.Col("f_tr").As("FreeThrowRate"),
-                    F.Col("x3p_ar").As("3PointAttemptRate"),
+                    F.Col("x3p_ar").As("ThreePointAttemptRate"),
                     F.Col("ts_percent").As("TrueShootingPercentage"),
                     F.Col("e_fg_percent").As("EffectiveFieldGoalPercentage"),
                     F.Col("tov_percent").As("TurnoverPercentage"),
@@ -87,6 +82,8 @@ namespace NBAPrediction.Services
             CreatePlayerAwardShareTable(spark, teams);
 
             CreatePlayerSeasonAdvancedStatsTable(spark, teams);
+
+            CreatePlayerSeasonStatsTable(spark, teams);
         }
 
         private void CreatePlayersTable(SparkSession spark) 
@@ -119,14 +116,14 @@ namespace NBAPrediction.Services
 
         private void CreatePlayerSeasonAdvancedStatsTable(SparkSession spark, DataFrame teams) 
         {
-            var advancedStats = _helperService.LoadFromCsv(spark, "Advanced.csv").Filter("tm != 'TOT'");
+            var advancedStats = _helperService.LoadFromCsv(spark, _pathToRaw + "Advanced.csv").Filter("tm != 'TOT'");
             advancedStats = advancedStats.Join(teams, advancedStats["tm"] == teams["TeamNameShort"])
                 .Select(F.Col("player_id").As("PlayerId"),
                     F.Col("season").As("Season"),
                     F.Col("TeamId"),
                     F.Col("per").As("PlayerEfficiencyRating"),
                     F.Col("ts_percent").As("TrueShootingPercentage"),
-                    F.Col("x3p_ar").As("3PointAttemptRate"),
+                    F.Col("x3p_ar").As("ThreePointAttemptRate"),
                     F.Col("f_tr").As("FreeThrowRate"),
                     F.Col("orb_percent").As("OffensiveReboundPercentage"),
                     F.Col("drb_percent").As("DefensiveReboundPercentage"),
@@ -153,7 +150,41 @@ namespace NBAPrediction.Services
 
         private void CreatePlayerSeasonStatsTable(SparkSession spark, DataFrame teams) 
         {
+            var playerPerGameStats = _helperService.LoadFromCsv(spark, _pathToRaw + "Player Per Game.csv").Filter("tm != 'TOT'");
+            playerPerGameStats = playerPerGameStats.Join(teams, playerPerGameStats["tm"] == teams["TeamNameShort"])
+                .Select(F.Col("player_id").As("PlayerId"),
+                    F.Col("season").As("Season"),
+                    F.Col("TeamId"),
+                    F.Col("g").As("GamesPlayed").Cast("short"),
+                    F.Col("gs").As("GamesStarted").Cast("short"),
+                    F.Col("mp_per_game").As("MinutesPerGame"),
+                    F.Col("pts_per_game").As("PointsPerGame"),
+                    F.Col("fg_per_game").As("FieldGoalsPerGame"),
+                    F.Col("fga_per_game").As("FieldGoalsAttemptedPerGame"),
+                    F.Col("fg_percent").As("FieldGoalPercentage"),
+                    F.Col("x3p_per_game").As("ThreePointersPerGame"),
+                    F.Col("x3pa_per_game").As("ThreePointersAttemptedPerGame"),
+                    F.Col("x3p_percent").As("ThreePointerPercentage"),
+                    F.Col("x2p_per_game").As("TwoPointersPerGame"),
+                    F.Col("x2pa_per_game").As("TwoPointersAttemptedPerGame"),
+                    F.Col("x2p_percent").As("TwoPointerPercentage"),
+                    F.Col("e_fg_percentage").As("EffectiveFieldGoalPercentage"),
+                    F.Col("ft_per_game").As("FreeThrowsPerGame"),
+                    F.Col("fta_per_game").As("FreeThrowsAttemptedPerGame"),
+                    F.Col("ft_percent").As("FreeThrowPercentage"),
+                    F.Col("orb_per_game").As("OffensiveReboundsPerGame"),
+                    F.Col("drb_per_game").As("DefensiveReboundsPerGame"),
+                    F.Col("trb_per_game").As("TotalReboundsPerGame"),
+                    F.Col("ast_per_game").As("AssistsPerGame"),
+                    F.Col("stl_per_game").As("StealsPerGame"),
+                    F.Col("blk_per_game").As("BlocksPerGame"),
+                    F.Col("tov_per_game").As("TurnoversPerGame"),
+                    F.Col("pf_per_game").As("PersonalFoulsPerGame"))
+                .Na().Replace("*", new Dictionary<string, string>() { { "NA", null } });
 
+            playerPerGameStats = CastColumnsToFloat(playerPerGameStats);
+
+            _helperService.CreateOrOverwriteManagedDeltaTable(playerPerGameStats, "PlayerSeasonStats");
         }
 
         private DataFrame CastColumnsToFloat(DataFrame dataFrame) 
