@@ -10,6 +10,7 @@ namespace NBAPrediction.Services
     internal class DataCleanerService : IDataCleanerService
     {
         private readonly IHelperService _helperService;
+        private readonly string _pathToRaw = "/workspace/NBAPrediction/datasets/";
 
         public DataCleanerService(IHelperService helperService) {
             _helperService = helperService;
@@ -26,17 +27,11 @@ namespace NBAPrediction.Services
                 "Team Summaries"
             };
 
-            // DataFrame advancedStats = _helperService.LoadFromCsv(spark, "Advanced.csv")
-            //     .Select("player_id", "season", "tm", "g", "mp", "per", "ts_percent", "x3p_ar", "f_tr", "orb_percent", "drb_percent", "trb_percent",
-            //     "ast_percent", "stl_percent", "blk_percent", "tov_percent", "usg_percent", "ows", "dws", "ws", "ws_48", "obpm", "dbpm", "bpm", "vorp")
-            //     .Filter("tm != TOT")
-            //     .Na().Replace("*", new Dictionary<string, string>() { { "NA", null } });
-
         }
 
-        private void CreateTeamTables(SparkSession spark)
+        private DataFrame CreateTeamTables(SparkSession spark)
         {
-            DataFrame teamSummaries = _helperService.LoadFromCsv(spark, "/workspace/NBAPrediction/datasets/Team Summaries.csv")
+            DataFrame teamSummaries = _helperService.LoadFromCsv(spark, _pathToRaw + "Team Summaries.csv")
                 .Filter("team != 'League Average' AND abbreviation != 'NA'");
 
             DataFrame teams = teamSummaries
@@ -47,7 +42,7 @@ namespace NBAPrediction.Services
                 .WithColumn("TeamId", 
                     F.Concat(F.Hex(F.Col("League")), F.Hex(F.Col("TeamNameShort"))));
 
-            teams.Write().Format("delta").Mode(SaveMode.Overwrite).SaveAsTable("Teams");
+            _helperService.CreateOrOverwriteManagedDeltaTable(teams, "Teams");
 
             DataFrame teamSeasonStats = teamSummaries
                 .Join(teams, teamSummaries["abbreviation"] == teams["TeamNameShort"] 
@@ -80,7 +75,85 @@ namespace NBAPrediction.Services
 
             teamSeasonStats = CastColumnsToFloat(teamSeasonStats);
 
-            teamSeasonStats.Write().Format("delta").Mode(SaveMode.Overwrite).SaveAsTable("TeamSeasonStats");
+            _helperService.CreateOrOverwriteManagedDeltaTable(teamSeasonStats, "TeamSeasonStats");
+
+            return teams;
+        }
+
+        private void CreatePlayerTables(SparkSession spark, DataFrame teams) 
+        {
+            CreatePlayersTable(spark);
+
+            CreatePlayerAwardShareTable(spark, teams);
+
+            CreatePlayerSeasonAdvancedStatsTable(spark, teams);
+        }
+
+        private void CreatePlayersTable(SparkSession spark) 
+        {
+            var playerInfo = _helperService.LoadFromCsv(spark, _pathToRaw + "Player Career Info.csv")
+                .Select(F.Col("player_id").As("PlayerId"),
+                    F.Col("player").As("PlayerName"),
+                    F.Col("hof").As("MadeHallOfFame").Cast("boolean"));
+            
+            playerInfo.Write().Format("delta").Mode(SaveMode.Overwrite).SaveAsTable("Players");
+
+            _helperService.CreateOrOverwriteManagedDeltaTable(playerInfo, "Players");
+        }
+
+        private void CreatePlayerAwardShareTable(SparkSession spark, DataFrame teams) 
+        {
+            var playerAwardShare = _helperService.LoadFromCsv(spark, _pathToRaw + "Player Award Shares.csv");
+            playerAwardShare = playerAwardShare.Join(teams, playerAwardShare["tm"] == teams["TeamNameShort"])
+                .Select(F.Col("award").As("Award"),
+                    F.Col("player_id").As("PlayerId"),
+                    F.Col("season").As("Season"),
+                    F.Col("TeamId"),
+                    F.Col("share").As("PointsWon").Cast("short"),
+                    F.Col("pts_max").As("MaxPointsPossible").Cast("short"),
+                    F.Col("share").As("Share").Cast("float"),
+                    F.Col("winner").As("WonAward").Cast("boolean"));
+
+            _helperService.CreateOrOverwriteManagedDeltaTable(playerAwardShare, "PlayerSeasonAwardShare");
+        }
+
+        private void CreatePlayerSeasonAdvancedStatsTable(SparkSession spark, DataFrame teams) 
+        {
+            var advancedStats = _helperService.LoadFromCsv(spark, "Advanced.csv").Filter("tm != 'TOT'");
+            advancedStats = advancedStats.Join(teams, advancedStats["tm"] == teams["TeamNameShort"])
+                .Select(F.Col("player_id").As("PlayerId"),
+                    F.Col("season").As("Season"),
+                    F.Col("TeamId"),
+                    F.Col("per").As("PlayerEfficiencyRating"),
+                    F.Col("ts_percent").As("TrueShootingPercentage"),
+                    F.Col("x3p_ar").As("3PointAttemptRate"),
+                    F.Col("f_tr").As("FreeThrowRate"),
+                    F.Col("orb_percent").As("OffensiveReboundPercentage"),
+                    F.Col("drb_percent").As("DefensiveReboundPercentage"),
+                    F.Col("trb_percent").As("TotalReboundPercentage"),
+                    F.Col("ast_percent").As("AssistPercentage"),
+                    F.Col("stl_percent").As("StealPercentage"),
+                    F.Col("blk_percent").As("BlockPercentage"),
+                    F.Col("tov_percent").As("TurnoverPercentage"),
+                    F.Col("usg_percent").As("UsagePercentage"),
+                    F.Col("ows").As("OffensiveWinShares"),
+                    F.Col("dws").As("DefensiveWinShares"),
+                    F.Col("ws").As("WinShares"),
+                    F.Col("ws_48").As("WinSharesPer48"),
+                    F.Col("obpm").As("OffensiveBoxPlusMinus"),
+                    F.Col("dpbm").As("DefensiveBoxPlusMinus"),
+                    F.Col("bpm").As("BoxPlusMinus"),
+                    F.Col("vorp").As("ValueOverReplacementPlayer"))
+                .Na().Replace("*", new Dictionary<string, string>() { { "NA", null } });
+
+            advancedStats = CastColumnsToFloat(advancedStats);
+
+            _helperService.CreateOrOverwriteManagedDeltaTable(advancedStats, "PlayerSeasonAdvancedStats");
+        }
+
+        private void CreatePlayerSeasonStatsTable(SparkSession spark, DataFrame teams) 
+        {
+
         }
 
         private DataFrame CastColumnsToFloat(DataFrame dataFrame) 
@@ -88,7 +161,7 @@ namespace NBAPrediction.Services
             var cols = dataFrame.Schema().Fields.Where(f => f.DataType.GetType().Name == "string").Select(f => f.Name);
             foreach(string col in cols)
             {
-                if(col != "Season" && col != "PlayerId" && col != "TeamId")
+                if(col != "Season" && col != "PlayerId" && col != "TeamId" && col != "Award")
                 dataFrame = dataFrame.WithColumn(col, F.Col(col).Cast("float"));
             }
 
