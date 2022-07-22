@@ -47,7 +47,7 @@ namespace NBAPrediction.Services
                     F.Col("age").As("AverageAge"),
                     F.Col("w").As("Wins").Cast("short"),
                     F.Col("l").As("Losses").Cast("short"),
-                    (F.Col("Wins") + F.Col("Losses")).As("GamesPlayed"),
+                    (F.Col("w").Cast("short") + F.Col("l").Cast("short")).As("GamesPlayed"),
                     F.Col("pw").As("PredictedWins").Cast("short"),
                     F.Col("pl").As("PredictedLosses").Cast("short"),
                     F.Col("mov").As("AverageMarginOfVictory"),
@@ -138,7 +138,7 @@ namespace NBAPrediction.Services
                     F.Col("ws").As("WinShares"),
                     F.Col("ws_48").As("WinSharesPer48"),
                     F.Col("obpm").As("OffensiveBoxPlusMinus"),
-                    F.Col("dpbm").As("DefensiveBoxPlusMinus"),
+                    F.Col("dbpm").As("DefensiveBoxPlusMinus"),
                     F.Col("bpm").As("BoxPlusMinus"),
                     F.Col("vorp").As("ValueOverReplacementPlayer"))
                 .Na().Replace("*", new Dictionary<string, string>() { { "NA", null } });
@@ -168,7 +168,7 @@ namespace NBAPrediction.Services
                     F.Col("x2p_per_game").As("TwoPointersPerGame"),
                     F.Col("x2pa_per_game").As("TwoPointersAttemptedPerGame"),
                     F.Col("x2p_percent").As("TwoPointerPercentage"),
-                    F.Col("e_fg_percentage").As("EffectiveFieldGoalPercentage"),
+                    F.Col("e_fg_percent").As("EffectiveFieldGoalPercentage"),
                     F.Col("ft_per_game").As("FreeThrowsPerGame"),
                     F.Col("fta_per_game").As("FreeThrowsAttemptedPerGame"),
                     F.Col("ft_percent").As("FreeThrowPercentage"),
@@ -189,11 +189,13 @@ namespace NBAPrediction.Services
 
         private DataFrame CastColumnsToFloat(DataFrame dataFrame) 
         {
-            var cols = dataFrame.Schema().Fields.Where(f => f.DataType.GetType().Name == "string").Select(f => f.Name);
+            var cols = dataFrame.Schema().Fields
+                .Where(f => f.DataType.GetType() == typeof(T.StringType))
+                .Select(f => f.Name);
             foreach(string col in cols)
             {
                 if(col != "Season" && col != "PlayerId" && col != "TeamId" && col != "Award")
-                dataFrame = dataFrame.WithColumn(col, F.Col(col).Cast("float"));
+                    dataFrame = dataFrame.WithColumn(col, F.Col(col).Cast("float"));
             }
 
             return dataFrame;
