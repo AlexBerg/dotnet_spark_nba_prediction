@@ -106,7 +106,7 @@ namespace NBAPrediction.Services
                     F.Col("player_id").As("PlayerId"),
                     F.Col("season").As("Season"),
                     F.Col("TeamId"),
-                    F.Col("share").As("PointsWon").Cast("short"),
+                    F.Col("pts_won").As("PointsWon").Cast("short"),
                     F.Col("pts_max").As("MaxPointsPossible").Cast("short"),
                     F.Col("share").As("Share").Cast("float"),
                     F.Col("winner").As("WonAward").Cast("boolean"));
