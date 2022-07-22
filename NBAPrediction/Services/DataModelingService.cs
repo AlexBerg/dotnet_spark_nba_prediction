@@ -7,12 +7,12 @@ using T = Microsoft.Spark.Sql.Types;
 
 namespace NBAPrediction.Services
 {
-    internal class DataCleanerService : IDataCleanerService
+    internal class DataModelingService : IDataModelingService
     {
         private readonly IHelperService _helperService;
         private readonly string _pathToRaw = "/workspace/NBAPrediction/datasets/";
 
-        public DataCleanerService(IHelperService helperService) {
+        public DataModelingService(IHelperService helperService) {
             _helperService = helperService;
         }
 
