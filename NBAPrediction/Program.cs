@@ -13,9 +13,9 @@ namespace NBAPrediction
             var helper = new HelperService();
             var spark = helper.GetSparkSession();
 
-            var dataCleaner = new DataCleanerService(helper);
+            var dataModeler = new DataModelingService(helper);
 
-            dataCleaner.CreateNBADeltaTables(spark);
+            dataModeler.CreateNBADeltaTables(spark);
         }
     }
 }
