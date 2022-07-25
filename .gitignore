@@ -3,3 +3,4 @@
 **/obj/
 nuget.config
 **/container_data
+**/temp
