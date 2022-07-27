@@ -51,14 +51,26 @@ namespace NBAPrediction.DataTypes
         [LoadColumn(22)]
         public float ValueOverReplacementPlayer;
         [LoadColumn(23)]
-        public float Share;
-        [LoadColumn(24)]
-        public bool WonAward;
-        [LoadColumn(25)]
         public float PointsPerGame;
-        [LoadColumn(26)]
+        [LoadColumn(24)]
         public float GamesPlayed;
-        [LoadColumn(27)]
+        [LoadColumn(25)]
         public float GamesStarted;
+        [LoadColumn(26)]
+        public float MinutesPerGame;
+        [LoadColumn(27)]
+        public float TeamGamesPlayed;
+        [LoadColumn(28)]
+        public string League;
+        [LoadColumn(29)]
+        public float WinPercentage;
+        [LoadColumn(29)]
+        public float AverageMarginOfVictory;
+        [LoadColumn(30)]
+        public float Share;
+        [LoadColumn(31)]
+        public string Award;
+        [LoadColumn(32)]
+        public bool WonAward;
     }
 }

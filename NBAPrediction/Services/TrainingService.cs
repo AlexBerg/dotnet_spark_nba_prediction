@@ -44,9 +44,12 @@ namespace NBAPrediction.Services
         {
             var trainingData = mlContext.Data.LoadFromTextFile<MVPWithStatsData>("datasets/temp/mvp/training/*.csv", separatorChar: ',', hasHeader: true);
 
+            var schema = trainingData.Schema;
+
             var pipeline = mlContext.Transforms
                 .Concatenate("Features", 
-                    "ValueOverReplacementPlayer", "BoxPlusMinus", "PlayerEfficiencyRating", "WinShares", "GamesStarted", "PointsPerGame")
+                    "ValueOverReplacementPlayer", "BoxPlusMinus", "PlayerEfficiencyRating", "WinShares", "GamesStarted", "PointsPerGame", "TrueShootingPercentage",
+                    "TotalReboundPercentage", "AssistPercentage", "StealPercentage", "BlockPercentage", "TurnoverPercentage", "WinPercentage", "AverageMarginOfVictory")
                 .Append(mlContext.Regression.Trainers.FastForest(labelColumnName: "Share", featureColumnName: "Features"));
 
             var model = pipeline.Fit(trainingData);
@@ -67,7 +70,7 @@ namespace NBAPrediction.Services
         {
             var mvpAwardShareWithStats = spark.Sql(
                     @"SELECT pt.*, a.Share, a.Award, a.WonAward FROM (
-                        SELECT p.*, t.GamesPlayed as TeamGamesPlayed, t.League FROM
+                        SELECT p.*, t.GamesPlayed AS TeamGamesPlayed, t.League, ROUND(t.Wins / t.GamesPlayed, 2) AS WinPercentage, t.AverageMarginOfVictory FROM
                         (
                             SELECT past.*, pst.PointsPerGame, pst.GamesPlayed, pst.GamesStarted, pst.MinutesPerGame FROM 
                             PlayerSeasonStats AS pst
@@ -83,11 +86,13 @@ namespace NBAPrediction.Services
                         LEFT JOIN PlayerSeasonAwardShare AS a ON pt.PlayerId = a.PlayerId AND pt.Season = a.Season AND pt.TeamId = a.TeamId"
             ).Filter(@"MinutesPerGame >= 20.0 
                 AND GamesStarted / GamesPlayed >= 0.50 
-                AND GamesPlayed / TeamGamesPlayed > 0.50
+                AND GamesPlayed / TeamGamesPlayed >= 0.50
                 AND League = 'NBA'")
             .WithColumn("Share", F.When(F.Col("Award") == "nba mvp", F.Col("Share")).Otherwise(null))
             .Na().Fill(new Dictionary<string, double>() { {"Share", 0.0} })
             .Na().Fill(new Dictionary<string, bool>() { {"WonAward", false} });
+
+            mvpAwardShareWithStats.PrintSchema();
 
             var trainingData = mvpAwardShareWithStats.Filter("Season != 2021");
             var testData = mvpAwardShareWithStats.Filter("Season = 2021");
