@@ -1,4 +1,6 @@
 using Microsoft.Spark.Sql;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace NBAPrediction.Services
 {
