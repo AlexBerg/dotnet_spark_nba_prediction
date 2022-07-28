@@ -1,12 +1,15 @@
 using Microsoft.Spark.Sql;
 using Microsoft.ML;
-using NBAPrediction.DataTypes;
 using Microsoft.Data.Analysis;
 using Microsoft.ML.Trainers;
 using System.Collections.Generic;
+using System;
 
 using F = Microsoft.Spark.Sql.Functions;
 using T = Microsoft.Spark.Sql.Types;
+using D = Microsoft.ML.Data.DataKind;
+using ML = Microsoft.ML;
+using Spark = Microsoft.Spark;
 
 namespace NBAPrediction.Services
 {
@@ -23,13 +26,13 @@ namespace NBAPrediction.Services
         {
             try
             {
-                CreateMVPAwardShareWithStatsDataSet(spark);
+                var cols = CreateMVPAwardShareWithStatsDataSet(spark);
 
                 var mlContext = new MLContext();
 
-                var model = TrainModel(mlContext);
+                var model = TrainModel(mlContext, cols);
 
-                EvaluateModel(mlContext, model);
+                EvaluateModel(mlContext, model, cols);
             }
             catch (System.Exception)
             {
@@ -40,14 +43,12 @@ namespace NBAPrediction.Services
             CleanupTempFiles();
         }
 
-        private ITransformer TrainModel(MLContext mlContext)
+        private ITransformer TrainModel(MLContext mlContext, ML.Data.TextLoader.Column[] cols)
         {
-            var trainingData = mlContext.Data.LoadFromTextFile<MVPWithStatsData>("datasets/temp/mvp/training/*.csv", separatorChar: ',', hasHeader: true);
-
-            var schema = trainingData.Schema;
+            var trainingData = LoadFromCsvFile(mlContext, "datasets/temp/mvp/training/*.csv", cols);
 
             var pipeline = mlContext.Transforms
-                .Concatenate("Features", 
+                .Concatenate("Features",
                     "ValueOverReplacementPlayer", "BoxPlusMinus", "PlayerEfficiencyRating", "WinShares", "GamesStarted", "PointsPerGame", "TrueShootingPercentage",
                     "TotalReboundPercentage", "AssistPercentage", "StealPercentage", "BlockPercentage", "TurnoverPercentage", "WinPercentage", "AverageMarginOfVictory")
                 .Append(mlContext.Regression.Trainers.FastForest(labelColumnName: "Share", featureColumnName: "Features"));
@@ -57,16 +58,23 @@ namespace NBAPrediction.Services
             return model;
         }
 
-        private void EvaluateModel(MLContext mlContext, ITransformer model)
+        private void EvaluateModel(MLContext mlContext, ITransformer model, ML.Data.TextLoader.Column[] cols)
         {
-            var testData = mlContext.Data.LoadFromTextFile<MVPWithStatsData>("datasets/temp/mvp/test/*.csv", separatorChar: ',', hasHeader: true);
+            var testData = LoadFromCsvFile(mlContext, "datasets/temp/mvp/test/*.csv", cols);
 
             var predictions = model.Transform(testData);
 
             var metrics = mlContext.Regression.Evaluate(predictions, "Share", "Score");
         }
 
-        private void CreateMVPAwardShareWithStatsDataSet(SparkSession spark)
+        private IDataView LoadFromCsvFile(MLContext mlContext, string path, ML.Data.TextLoader.Column[] cols)
+        {
+            var dw = mlContext.Data.LoadFromTextFile(path, cols, separatorChar: ',', hasHeader: true);
+
+            return dw;
+        }
+
+        private ML.Data.TextLoader.Column[] CreateMVPAwardShareWithStatsDataSet(SparkSession spark)
         {
             var mvpAwardShareWithStats = spark.Sql(
                     @"SELECT pt.*, a.Share, a.Award, a.WonAward FROM (
@@ -89,8 +97,8 @@ namespace NBAPrediction.Services
                 AND GamesPlayed / TeamGamesPlayed >= 0.50
                 AND League = 'NBA'")
             .WithColumn("Share", F.When(F.Col("Award") == "nba mvp", F.Col("Share")).Otherwise(null))
-            .Na().Fill(new Dictionary<string, double>() { {"Share", 0.0} })
-            .Na().Fill(new Dictionary<string, bool>() { {"WonAward", false} });
+            .Na().Fill(new Dictionary<string, double>() { { "Share", 0.0 } })
+            .Na().Fill(new Dictionary<string, bool>() { { "WonAward", false } });
 
             mvpAwardShareWithStats.PrintSchema();
 
@@ -102,12 +110,34 @@ namespace NBAPrediction.Services
 
             testData.Write().Format("csv").Option("header", true)
                 .Save("/workspace/NBAPrediction/datasets/temp/mvp/test");
+
+            var cols = GetColumns(mvpAwardShareWithStats);
+
+            return cols;
         }
 
         private void CleanupTempFiles()
         {
-            if(System.IO.Directory.Exists("datasets/temp"))
+            if (System.IO.Directory.Exists("datasets/temp"))
                 System.IO.Directory.Delete("datasets/temp", true);
+        }
+
+        private ML.Data.TextLoader.Column[] GetColumns(Spark.Sql.DataFrame df)
+        {
+            var resultList = new List<ML.Data.TextLoader.Column>();
+            var schema = df.Schema();
+            var index = 0;
+            foreach (var field in schema.Fields)
+            {
+                var fieldType = field.DataType.GetType();
+                var type = fieldType == typeof(T.BooleanType) ? D.Boolean :
+                    fieldType == typeof(T.StringType) ? D.String : D.Single;
+                var col = new ML.Data.TextLoader.Column(field.Name, type, index);
+                resultList.Add(col);
+                index += 1;
+            }
+
+            return resultList.ToArray();
         }
     }
 }
