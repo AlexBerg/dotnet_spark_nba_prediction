@@ -100,8 +100,6 @@ namespace NBAPrediction.Services
             .Na().Fill(new Dictionary<string, double>() { { "Share", 0.0 } })
             .Na().Fill(new Dictionary<string, bool>() { { "WonAward", false } });
 
-            mvpAwardShareWithStats.PrintSchema();
-
             var trainingData = mvpAwardShareWithStats.Filter("Season != 2021");
             var testData = mvpAwardShareWithStats.Filter("Season = 2021");
 
