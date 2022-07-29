@@ -50,7 +50,7 @@ namespace NBAPrediction.Services
             var pipeline = mlContext.Transforms
                 .Concatenate("Features",
                     "ValueOverReplacementPlayer", "PlayerEfficiencyRating", "WinShares", "TrueShootingPercentage",
-                    "TotalReboundPercentage", "AssistPercentage", "StealPercentage", "BlockPercentage", "TurnoverPercentage")
+                    "TotalReboundPercentage", "AssistPercentage", "StealPercentage", "BlockPercentage", "TurnoverPercentage", "OnCourtPlusMinusPer100Poss", "PointsGeneratedByAssitsPerGame")
                 .Append(mlContext.Regression.Trainers.FastForest(labelColumnName: "Share", featureColumnName: "Features"));
 
             var model = pipeline.Fit(trainingData);
@@ -80,9 +80,10 @@ namespace NBAPrediction.Services
                     @"SELECT pt.*, a.Share, a.Award, a.WonAward FROM (
                         SELECT p.*, t.GamesPlayed AS TeamGamesPlayed, t.League, ROUND(t.Wins / t.GamesPlayed, 2) AS WinPercentage, t.AverageMarginOfVictory, t.NetRating FROM
                         (
-                            SELECT past.*, pst.PointsPerGame, pst.GamesPlayed, pst.GamesStarted, pst.MinutesPerGame FROM 
+                            SELECT past.*, pst.PointsPerGame, pst.GamesPlayed, pst.GamesStarted, pst.MinutesPerGame, pbp.OnCourtPlusMinusPer100Poss, pbp.NetPlusMinutPer100Poss, pbp.PointsGeneratedByAssitsPerGame FROM 
                             PlayerSeasonStats AS pst
                             LEFT JOIN PlayerSeasonAdvancedStats AS past ON pst.PlayerId = past.PlayerId AND pst.Season = past.Season AND pst.TeamId = past.TeamId
+                            LEFT JOIN PlayerSeasonPlayByPlayStats AS pbp ON pst.PlayerId = pbp.PlayerId AND pst.Season = pbp.Season AND pst.TeamId = pbp.TeamId
                         ) AS p
                         LEFT JOIN (
                             SELECT tst.*, team.League FROM

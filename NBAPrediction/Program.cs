@@ -13,8 +13,6 @@ namespace NBAPrediction
 
             var training = new TrainingService(helper);
 
-            var dataModelingService = new DataModelingService(helper);
-
             training.TrainAndEvaluateMVPPredicitionModel(spark);
         }
     }
