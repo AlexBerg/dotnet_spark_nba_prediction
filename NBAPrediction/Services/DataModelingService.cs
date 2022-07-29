@@ -29,7 +29,7 @@ namespace NBAPrediction.Services
             spark.Catalog.ListTables().Show();
 
             var list = new List<string> {
-                "Players", "Teams", "TeamSeasonStats", "PlayerSeasonAwardShare", "PlayerSeasonAdvancedStats", "PlayerSeasonStats"
+                "Players", "Teams", "TeamSeasonStats", "PlayerSeasonAwardShare", "PlayerSeasonAdvancedStats", "PlayerSeasonStats", "PlayerSeasonPlayByPlayStats"
             };
 
             try
@@ -120,6 +120,8 @@ namespace NBAPrediction.Services
             CreatePlayerSeasonAdvancedStatsTable(spark, teams);
 
             CreatePlayerSeasonStatsTable(spark, teams);
+
+            CreatePlayerPlayByPlayTable(spark, teams);
         }
 
         private void CreatePlayersTable(SparkSession spark)
@@ -187,6 +189,33 @@ namespace NBAPrediction.Services
             advancedStats = CastColumnsToFloat(advancedStats);
 
             _helperService.CreateOrOverwriteManagedDeltaTable(advancedStats, "PlayerSeasonAdvancedStats");
+        }
+
+        private void CreatePlayerPlayByPlayTable(SparkSession spark, DataFrame teams) 
+        {
+            var playByPlay = _helperService.LoadFromCsv(spark, _pathToRaw + "Player Play By Play.csv").Filter("tm != 'TOT'");
+
+            playByPlay = playByPlay.Join(teams, playByPlay["tm"] == teams["TeamNameShort"] & 
+                    playByPlay["season"] == teams["Season"])
+                .Select(F.Col("player_id").As("PlayerId"),
+                    playByPlay["season"].As("Season"),
+                    F.Col("TeamId"),
+                    F.Col("pg_percent").As("PointGuardPercent"),
+                    F.Col("sg_percent").As("ShootingGuardPercent"),
+                    F.Col("sf_percent").As("SmallForwardPercent"),
+                    F.Col("pf_percent").As("PowerForwardPercent"),
+                    F.Col("c_percent").As("CenterPercent"),
+                    F.Col("on_court_plus_minus_per_100_poss").As("OnCourtPlusMinusPer100Poss"),
+                    F.Col("net_plus_minus_per_100_poss").As("NetPlusMinutPer100Poss"),
+                    F.Round(F.Col("shooting_foul_drawn") / F.Col("g"), 2).As("ShootingFoulDrawnPerGame"),
+                    F.Round(F.Col("offensive_foul_drawn") / F.Col("g"), 2).As("OffensiveFoulDrawnPerGame"),
+                    F.Round(F.Col("points_generated_by_assists") / F.Col("g"), 2).As("PointsGeneratedByAssitsPerGame"),
+                    F.Round(F.Col("and1") / F.Col("g"), 2).As("And1PerGame"))
+                .Na().Replace("*", new Dictionary<string, string>() { { "NA", null } });
+
+            playByPlay = CastColumnsToFloat(playByPlay);
+
+            _helperService.CreateOrOverwriteManagedDeltaTable(playByPlay, "PlayerSeasonPlayByPlayStats");
         }
 
         private void CreatePlayerSeasonStatsTable(SparkSession spark, DataFrame teams)

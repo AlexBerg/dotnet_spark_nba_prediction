@@ -49,8 +49,8 @@ namespace NBAPrediction.Services
 
             var pipeline = mlContext.Transforms
                 .Concatenate("Features",
-                    "ValueOverReplacementPlayer", "BoxPlusMinus", "PlayerEfficiencyRating", "WinShares", "GamesStarted", "PointsPerGame", "TrueShootingPercentage",
-                    "TotalReboundPercentage", "AssistPercentage", "StealPercentage", "BlockPercentage", "TurnoverPercentage", "WinPercentage", "AverageMarginOfVictory")
+                    "ValueOverReplacementPlayer", "PlayerEfficiencyRating", "WinShares", "TrueShootingPercentage",
+                    "TotalReboundPercentage", "AssistPercentage", "StealPercentage", "BlockPercentage", "TurnoverPercentage")
                 .Append(mlContext.Regression.Trainers.FastForest(labelColumnName: "Share", featureColumnName: "Features"));
 
             var model = pipeline.Fit(trainingData);
@@ -78,7 +78,7 @@ namespace NBAPrediction.Services
         {
             var mvpAwardShareWithStats = spark.Sql(
                     @"SELECT pt.*, a.Share, a.Award, a.WonAward FROM (
-                        SELECT p.*, t.GamesPlayed AS TeamGamesPlayed, t.League, ROUND(t.Wins / t.GamesPlayed, 2) AS WinPercentage, t.AverageMarginOfVictory FROM
+                        SELECT p.*, t.GamesPlayed AS TeamGamesPlayed, t.League, ROUND(t.Wins / t.GamesPlayed, 2) AS WinPercentage, t.AverageMarginOfVictory, t.NetRating FROM
                         (
                             SELECT past.*, pst.PointsPerGame, pst.GamesPlayed, pst.GamesStarted, pst.MinutesPerGame FROM 
                             PlayerSeasonStats AS pst
@@ -100,8 +100,8 @@ namespace NBAPrediction.Services
             .Na().Fill(new Dictionary<string, double>() { { "Share", 0.0 } })
             .Na().Fill(new Dictionary<string, bool>() { { "WonAward", false } });
 
-            var trainingData = mvpAwardShareWithStats.Filter("Season != 2021");
-            var testData = mvpAwardShareWithStats.Filter("Season = 2021");
+            var trainingData = mvpAwardShareWithStats.Filter("Season != 2022");
+            var testData = mvpAwardShareWithStats.Filter("Season = 2022");
 
             trainingData.Write().Format("csv").Option("header", true)
                 .Save("/workspace/NBAPrediction/datasets/temp/mvp/training");
